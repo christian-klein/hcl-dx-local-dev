@@ -81,9 +81,15 @@ else
     read -rp "  Start Docker daemon now? [Y/n] " ans
     ans="${ans:-Y}"
     if [[ "$ans" =~ ^[Yy]$ ]]; then
-        sudo systemctl enable --now docker
-        sudo usermod -aG docker "$USER"
-        echo "  Docker started. You may need to log out and back in for group membership to take effect."
+        if sudo systemctl enable --now docker 2>&1; then
+            sudo usermod -aG docker "$USER"
+            echo "  Docker started. You may need to log out and back in for group membership to take effect."
+        else
+            echo "  $FAIL  Failed to start Docker. Investigate with:"
+            echo "           sudo systemctl status docker.service"
+            echo "           sudo journalctl -xeu docker.service"
+            (( ERRORS++ )) || true
+        fi
     else
         echo "  Docker must be running before installing k3d."
         (( ERRORS++ )) || true

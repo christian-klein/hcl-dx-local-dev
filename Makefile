@@ -41,7 +41,7 @@ stop: ## Stop the k3d cluster and free CPU/RAM
 install-k3d: ## Download and install the k3d binary
 	@bash scripts/install-k3d.sh
 
-configure-k3d: $(CONFIG_FILE) ## Create the k3d cluster from .k3d-config.env settings
+configure-k3d: ## Create the k3d cluster from .k3d-config.env settings
 	@CLUSTER_NAME=$(CLUSTER_NAME) bash scripts/configure-k3d.sh
 
 uninstall-k3d: ## Delete the k3d cluster and remove the k3d binary
@@ -123,8 +123,3 @@ install-all: $(_INSTALL_DEPS) ## Full install pipeline in dependency order
 
 uninstall-all: $(_UNINSTALL_DEPS) ## Full uninstall pipeline in reverse order
 
-# ── Guards ────────────────────────────────────────────────────────────────────
-
-$(CONFIG_FILE):
-	@echo "Error: $(CONFIG_FILE) not found. Run 'make analyze-resources' first." >&2
-	@exit 1
