@@ -15,6 +15,22 @@ fi
 # shellcheck source=.k3d-config.env
 source "$CONFIG_FILE"
 
+# ── Docker socket access check ─────────────────────────────────────────────────
+
+if ! docker info &>/dev/null; then
+    echo "Error: cannot connect to the Docker daemon." >&2
+    echo "" >&2
+    echo "  If Docker was just installed or your user was just added to the" >&2
+    echo "  'docker' group, the current shell session does not have the updated" >&2
+    echo "  group membership yet. Fix with one of:" >&2
+    echo "" >&2
+    echo "    newgrp docker          # apply in the current shell" >&2
+    echo "    exec su -l \$USER       # start a fresh login shell" >&2
+    echo "" >&2
+    echo "  Then re-run: make install-all" >&2
+    exit 1
+fi
+
 # ── Idempotency check ──────────────────────────────────────────────────────────
 
 if k3d cluster get "$CLUSTER_NAME" &>/dev/null; then

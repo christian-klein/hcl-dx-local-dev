@@ -6,16 +6,22 @@ ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null \
     || realpath "$(dirname "$0")/..")"
 cd "$ROOT"
 
-# ── Parse documented targets from Makefile ────────────────────────────────────
-# Matches lines of the form:  target-name: [prereqs] ## Description
+# ── Parse Makefile: group headers (##@) and documented targets (##) ───────────
 
 NAMES=()
 DESCS=()
+TARGET_GROUPS=()
 
+current_group=""
 while IFS= read -r line; do
-    if [[ "$line" =~ ^([a-zA-Z0-9_-]+):.*##[[:space:]]+(.*) ]]; then
-        NAMES+=("${BASH_REMATCH[1]}")
+    if [[ "$line" =~ ^##@[[:space:]]+(.*) ]]; then
+        current_group="${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^([a-zA-Z0-9_-]+):.*##[[:space:]]+(.*) ]]; then
+        name="${BASH_REMATCH[1]}"
+        [[ "$name" == "menu" ]] && continue
+        NAMES+=("$name")
         DESCS+=("${BASH_REMATCH[2]}")
+        TARGET_GROUPS+=("$current_group")
     fi
 done < Makefile
 
@@ -28,17 +34,26 @@ fi
 
 if command -v fzf &>/dev/null; then
     MENU=""
+    prev_group=""
     for i in "${!NAMES[@]}"; do
-        MENU+="$(printf '%-25s  %s' "${NAMES[$i]}" "${DESCS[$i]}")"$'\n'
+        group="${TARGET_GROUPS[$i]}"
+        if [[ "$group" != "$prev_group" ]]; then
+            [[ -n "$MENU" ]] && MENU+=$'\n'
+            MENU+="  ── $group"$'\n'
+            prev_group="$group"
+        fi
+        MENU+="$(printf '     %-23s  %s' "${NAMES[$i]}" "${DESCS[$i]}")"$'\n'
     done
 
     SELECTED=$(printf '%s' "$MENU" | fzf \
         --prompt="▶  " \
         --height=60% \
         --border=rounded \
+        --layout=reverse \
         --header=" hcl-dx-local-dev  |  ↑↓ navigate   enter select   esc quit" \
         --header-first \
-        --no-sort) || exit 0
+        --no-sort \
+        --bind 'enter:transform:printf "%s" {} | grep -q "^  ── " && echo ignore || echo accept') || exit 0
 
     [[ -z "$SELECTED" ]] && exit 0
     TARGET=$(awk '{print $1}' <<< "$SELECTED")
@@ -49,8 +64,18 @@ else
     echo ""
     printf "  %-4s  %-25s  %s\n" "No." "Target" "Description"
     printf "  %s\n" "$(printf '─%.0s' {1..70})"
+
+    num=0
+    prev_group=""
     for i in "${!NAMES[@]}"; do
-        printf "  %-4s  %-25s  %s\n" "$((i+1)))" "${NAMES[$i]}" "${DESCS[$i]}"
+        group="${TARGET_GROUPS[$i]}"
+        if [[ "$group" != "$prev_group" ]]; then
+            echo ""
+            printf "  ── %s\n" "$group"
+            prev_group="$group"
+        fi
+        num=$(( num + 1 ))
+        printf "  %-4s  %-25s  %s\n" "$num)" "${NAMES[$i]}" "${DESCS[$i]}"
     done
     echo ""
     read -rp "Select a target (number, or q to quit): " CHOICE
