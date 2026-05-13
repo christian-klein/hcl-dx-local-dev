@@ -1,18 +1,25 @@
 SHELL        := /bin/bash
 CLUSTER_NAME ?= hcl-dx
-CONFIG_FILE  := .k3d-config.env
+LOCAL_ENV    := local.env
 
 .DEFAULT_GOAL := menu
 
--include $(CONFIG_FILE)
+-include $(LOCAL_ENV)
+
+# Fallbacks if local.env is missing or incomplete
+CLUSTER_NAME ?= hcl-dx
+DX_NAMESPACE ?= dxns
+DX_RELEASE   ?= dx
 
 _INSTALL_DEPS   := check-prereqs \
                    install-k3d configure-k3d \
                    install-kubectl configure-kubectl \
                    install-helm configure-helm \
-                   install-k9s configure-k9s
+                   install-k9s configure-k9s \
+                   configure-dx install-dx configure-dx-ingress
 
-_UNINSTALL_DEPS := clean-k9s uninstall-k9s \
+_UNINSTALL_DEPS := uninstall-dx clean-dx \
+                   clean-k9s uninstall-k9s \
                    clean-helm uninstall-helm \
                    clean-kubectl uninstall-kubectl \
                    clean-k3d uninstall-k3d
@@ -22,7 +29,13 @@ _UNINSTALL_DEPS := clean-k9s uninstall-k9s \
         install-kubectl configure-kubectl uninstall-kubectl clean-kubectl \
         install-helm configure-helm uninstall-helm clean-helm \
         install-k9s configure-k9s uninstall-k9s clean-k9s \
-        install-all uninstall-all
+        install-all uninstall-all \
+        configure-dx install-dx uninstall-dx clean-dx \
+        pull-dx-chart pull-dx-values reset-dx-chart create-dx-secret
+
+# Auto-create local.env with defaults if it does not exist
+$(LOCAL_ENV):
+	@bash scripts/init-config.sh
 
 menu: ## Show interactive target menu (default)
 	@bash scripts/menu.sh
@@ -46,7 +59,7 @@ stop: ## Stop the k3d cluster and free CPU/RAM
 check-prereqs: ## Check for Docker, curl, make; offer to install missing tools
 	@bash scripts/check-prereqs.sh
 
-analyze-resources: ## Detect system resources; recommend and save k3d settings
+analyze-resources: ## Detect system resources; recommend and save k3d settings to local.env
 	@bash scripts/analyze-resources.sh
 
 ##@ k3d
@@ -54,7 +67,7 @@ analyze-resources: ## Detect system resources; recommend and save k3d settings
 install-k3d: ## Download and install the k3d binary
 	@bash scripts/install-k3d.sh
 
-configure-k3d: ## Create the k3d cluster from .k3d-config.env settings
+configure-k3d: ## Create the k3d cluster from local.env settings
 	@CLUSTER_NAME=$(CLUSTER_NAME) bash scripts/configure-k3d.sh
 
 uninstall-k3d: ## Delete the k3d cluster and remove the k3d binary
@@ -62,9 +75,9 @@ uninstall-k3d: ## Delete the k3d cluster and remove the k3d binary
 	@sudo rm -f /usr/local/bin/k3d
 	@echo "k3d cluster deleted and binary removed."
 
-clean-k3d: ## Remove k3d configuration and generated cluster files
-	@rm -f $(CONFIG_FILE) config/k3d-cluster.yaml
-	@echo "Removed k3d configuration files."
+clean-k3d: ## Remove generated k3d cluster config
+	@rm -f config/k3d-cluster.yaml
+	@echo "Removed k3d cluster config."
 
 ##@ kubectl
 
@@ -118,3 +131,35 @@ clean-k9s: ## Remove k9s configuration directory and shell completions
 	@sudo rm -f /etc/bash_completion.d/k9s
 	@rm -f $(HOME)/.config/fish/completions/k9s.fish
 	@echo "k9s configuration removed."
+
+##@ HCL DX
+
+pull-dx-chart: ## Download and extract the HCL DX chart to charts/<version>/ (skips if already present)
+	@bash scripts/pull-dx-chart.sh
+
+pull-dx-values: ## Save the HCL DX default values to charts/<version>/dx-values-reference.yaml
+	@bash scripts/pull-dx-values.sh
+
+reset-dx-chart: ## Re-extract the HCL DX chart from the local tarball, discarding any edits
+	@bash scripts/reset-dx-chart.sh
+
+create-dx-secret: ## Create the hclcr.io image pull secret in the DX namespace
+	@bash scripts/create-dx-secret.sh
+
+configure-dx: ## Create DX namespace and save deployment settings to local.env
+	@bash scripts/configure-dx.sh
+
+configure-dx-ingress: ## Create Traefik TCP passthrough route so DX is reachable at https://localhost
+	@bash scripts/configure-dx-ingress.sh
+
+install-dx: ## Install or upgrade HCL DX via Helm (uses local chart if pulled, otherwise OCI)
+	@bash scripts/install-dx.sh
+
+open-dx: ## Forward HAProxy to localhost:8443 and open HCL DX in the browser
+	@bash scripts/open-dx.sh
+
+uninstall-dx: ## Uninstall the HCL DX Helm release
+	@bash scripts/uninstall-dx.sh
+
+clean-dx: ## Delete the DX namespace and remove generated DX files
+	@bash scripts/clean-dx.sh

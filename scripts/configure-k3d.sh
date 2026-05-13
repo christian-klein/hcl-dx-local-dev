@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONFIG_FILE=".k3d-config.env"
+LOCAL_ENV="local.env"
 CLUSTER_NAME="${CLUSTER_NAME:-hcl-dx}"
 CLUSTER_CONFIG="config/k3d-cluster.yaml"
 
 # ── Validate prerequisites ─────────────────────────────────────────────────────
 
-if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "Error: $CONFIG_FILE not found. Run 'make analyze-resources' first." >&2
+if [[ ! -f "$LOCAL_ENV" ]]; then
+    echo "Error: local.env not found. Run 'make analyze-resources' first." >&2
     exit 1
 fi
 
-# shellcheck source=.k3d-config.env
-source "$CONFIG_FILE"
+# shellcheck source=local.env
+source "$LOCAL_ENV"
+CLUSTER_NAME="${CLUSTER_NAME:-hcl-dx}"
 
 # ── Docker socket access check ─────────────────────────────────────────────────
 
