@@ -38,9 +38,10 @@ DX_RELEASE="${DX_RELEASE:-dx}"
 DX_REGISTRY_SECRET="${DX_REGISTRY_SECRET:-dx-harbor}"
 EDITOR="${EDITOR:-vi}"
 
-LOCAL_CHART="charts/${DX_VERSION}/hcl-dx-deployment"
-REFERENCE="charts/${DX_VERSION}/dx-values-reference.yaml"
-DX_VALUES="charts/${DX_VERSION}/dx-values.yaml"
+LOCAL_CHART="charts/dx/${DX_VERSION}/hcl-dx-deployment"
+REFERENCE="charts/dx/${DX_VERSION}/dx-values-reference.yaml"
+DX_VALUES="charts/dx/${DX_VERSION}/dx-values.yaml"
+DX_SEARCH_VALUES="charts/dx/${DX_VERSION}/dx-search-values.yaml"
 
 # ── Step 1: Ensure namespace exists ──────────────────────────────────────────
 
@@ -98,6 +99,11 @@ else
     ACTION="Installing"
 fi
 
+EXTRA_VALUES_FLAG=""
+if [[ -f "$DX_SEARCH_VALUES" ]]; then
+    EXTRA_VALUES_FLAG="-f ${DX_SEARCH_VALUES}"
+fi
+
 echo ""
 echo "${ACTION} HCL DX..."
 echo "  Release   : ${DX_RELEASE}"
@@ -105,11 +111,14 @@ echo "  Namespace : ${DX_NAMESPACE}"
 echo "  Version   : ${DX_VERSION}"
 echo "  Chart     : ${LOCAL_CHART}"
 echo "  Values    : ${DX_VALUES}"
+[[ -n "$EXTRA_VALUES_FLAG" ]] && echo "  Search    : ${DX_SEARCH_VALUES}"
 echo ""
 
+# shellcheck disable=SC2086
 helm upgrade --install "$DX_RELEASE" "$LOCAL_CHART" \
     --namespace "$DX_NAMESPACE" \
-    -f "$DX_VALUES"
+    -f "$DX_VALUES" \
+    ${EXTRA_VALUES_FLAG}
 
 echo ""
 echo "${ACTION} submitted. Pods are starting — this can take 20-30 minutes."
