@@ -176,7 +176,7 @@ make install-search
 3. **Chart** — pulls `hcl-dx-search` to `charts/search/<version>/hcl-dx-search/` if not already present.
 4. **Reference values** — generates `charts/search/<version>/search-values-reference.yaml` from the chart if not already present.
 5. **TLS certificates** — generates a root CA, admin, node, and client certificate using OpenSSL. Certs are stored in `charts/search/<version>/certs/` (gitignored). Creates three k8s secrets in the DX namespace: `search-admin-cert`, `search-node-cert`, `search-client-cert`. Idempotent — skips if certs already exist.
-6. **Local overrides** — writes `charts/search/<version>/search-values-local.yaml` with the `local-path` StorageClass and the `adminDn` extracted from the admin certificate. This file is always regenerated and merged _after_ your values file.
+6. **Local overrides** — writes `charts/search/<version>/search-values-local.yaml` with the image registry, image pull secret, `local-path` StorageClass for both OpenSearch volumes, and the DX deployment name. This file is always regenerated and merged _after_ your values file so it always wins.
 7. **Editor** — opens `charts/search/<version>/search-values.yaml` for you to add any additional overrides (image pull secrets, resource limits, replica counts, etc.).
 8. **Helm install/upgrade** — runs `helm upgrade --install` with both values files.
 9. **DX wiring** — injects `networking.searchMiddlewareService` into `charts/dx/<version>/dx-values.yaml` and runs `helm upgrade` on the DX release so DX can reach the search middleware.

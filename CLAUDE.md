@@ -161,7 +161,7 @@ DX Search v2 (`hcl-dx-search`) is installed separately from the main DX chart. `
 
 1. Sets `vm.max_map_count=262144` on the host via `configure-search-prereqs.sh` (k3d nodes share the host kernel; OpenSearch requires this).
 2. Generates root CA, admin, node, and client certificates using OpenSSL. Certs are stored under `charts/search/<version>/certs/` (gitignored). Creates three k8s secrets: `search-admin-cert`, `search-node-cert`, `search-client-cert`.
-3. Writes `charts/search/<version>/search-values-local.yaml` with `storageClass: local-path` and the `adminDn` extracted from the admin cert. Merged after the user's values file so it always takes precedence.
+3. Writes `charts/search/<version>/search-values-local.yaml` with `images.repository`, `images.imagePullSecrets`, `local-path` storageClass for both OpenSearch volumes, and `configuration.automatedSetup.dxDeploymentName`. Merged after the user's values file so it always takes precedence.
 4. Opens the user's values file in an editor, then runs `helm upgrade --install`.
 5. Injects `networking.searchMiddlewareService` into the DX values file and runs a DX helm upgrade to wire the two charts together.
 
@@ -190,5 +190,5 @@ The `search-values-local.yaml` file (auto-generated, gitignored) is always regen
 - **`config/k3d-cluster.yaml` is generated and gitignored**: Derived from `.k3d-config.env`; regenerated each time `configure-k3d` runs.
 - **`start`/`stop` separate from `install`/`uninstall`**: Allows the cluster to be suspended and resumed without reinstalling, freeing host CPU/RAM when HCL DX is not needed.
 - **HCL DX resource requirements**: HCL DX is resource-intensive (16 GB+ RAM recommended). `analyze-resources` reserves 2 CPUs and 4 GB for the host by default.
-- **Search TLS via generated certs**: OpenSearch requires mutual TLS. Certs are generated locally with OpenSSL and stored gitignored; the `adminDn` is extracted dynamically from the admin cert so it always matches exactly what OpenSearch sees in the certificate.
-- **`search-values-local.yaml` separate from user values**: Keeps auto-generated overrides (storageClass, adminDn) out of the user-editable file and ensures they always win on merge order.
+- **Search TLS via generated certs**: OpenSearch requires mutual TLS. Certs are generated locally with OpenSSL and stored gitignored. The chart derives the admin DN from the cert secret directly; `adminDn` is not a chart values key.
+- **`search-values-local.yaml` separate from user values**: Keeps auto-generated overrides (storageClass, registry, pull secret, dxDeploymentName) out of the user-editable file and ensures they always win on merge order.

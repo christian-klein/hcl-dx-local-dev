@@ -139,6 +139,4 @@ kubectl create secret generic search-client-cert \
     --dry-run=client -o yaml | kubectl apply -f -
 
 echo "OpenSearch TLS secrets created."
-
-# Print ADMIN_DN on its own line so callers can capture it.
-echo "ADMIN_DN=${ADMIN_DN}"
+echo "Admin DN : ${ADMIN_DN}"
