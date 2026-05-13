@@ -101,9 +101,9 @@ check-prereqs
 
 `install-dx` is the interactive DX deployment step. It performs these actions automatically in sequence:
 
-1. **Pulls the Helm chart** from `hclcr.io` to `charts/<version>/hcl-dx-deployment/` if not already present. The original tarball is kept at `charts/<version>/hcl-dx-deployment-<version>.tgz` as a reset point.
-2. **Pulls the default values** from the chart to `charts/<version>/dx-values-reference.yaml` if not already present.
-3. **Creates `charts/<version>/dx-values.yaml`** as a copy of the reference file if it does not yet exist.
+1. **Pulls the Helm chart** from `hclcr.io` to `charts/dx/<version>/hcl-dx-deployment/` if not already present. The original tarball is kept at `charts/dx/<version>/hcl-dx-deployment-<version>.tgz` as a reset point.
+2. **Pulls the default values** from the chart to `charts/dx/<version>/dx-values-reference.yaml` if not already present.
+3. **Creates `charts/dx/<version>/dx-values.yaml`** as a copy of the reference file if it does not yet exist.
 4. **Opens the values file in your editor** (`EDITOR` in `local.env`, default `vi`). At minimum, add the image pull secret configuration:
    ```yaml
    images:
@@ -159,14 +159,40 @@ make start CLUSTER_NAME=my-cluster
 
 ---
 
+## HCL DX Search v2
+
+DX Search v2 is a separate Helm chart (`hcl-dx-search`) installed independently into the same namespace as DX. The version is controlled by `DX_SEARCH_VERSION` in `local.env`.
+
+> **Note:** This local setup runs a single-replica OpenSearch cluster. DX Search v2 is not configured for high availability in this environment.
+
+```bash
+make install-search
+```
+
+`install-search` is fully automated. It runs these steps in order:
+
+1. **OpenSearch kernel prerequisite** — sets `vm.max_map_count=262144` on the host (k3d nodes share the host kernel). Requires `sudo` on first run; persists to `/etc/sysctl.d/99-dx-opensearch.conf`.
+2. **Namespace** — creates `DX_NAMESPACE` if it does not already exist.
+3. **Chart** — pulls `hcl-dx-search` to `charts/search/<version>/hcl-dx-search/` if not already present.
+4. **Reference values** — generates `charts/search/<version>/search-values-reference.yaml` from the chart if not already present.
+5. **TLS certificates** — generates a root CA, admin, node, and client certificate using OpenSSL. Certs are stored in `charts/search/<version>/certs/` (gitignored). Creates three k8s secrets in the DX namespace: `search-admin-cert`, `search-node-cert`, `search-client-cert`. Idempotent — skips if certs already exist.
+6. **Local overrides** — writes `charts/search/<version>/search-values-local.yaml` with the `local-path` StorageClass and the `adminDn` extracted from the admin certificate. This file is always regenerated and merged _after_ your values file.
+7. **Editor** — opens `charts/search/<version>/search-values.yaml` for you to add any additional overrides (image pull secrets, resource limits, replica counts, etc.).
+8. **Helm install/upgrade** — runs `helm upgrade --install` with both values files.
+9. **DX wiring** — injects `networking.searchMiddlewareService` into `charts/dx/<version>/dx-values.yaml` and runs `helm upgrade` on the DX release so DX can reach the search middleware.
+
+Individual targets for each step are also available: `configure-search-prereqs`, `create-search-certs`, `pull-search-chart`, `pull-search-values`, `reset-search-chart`, `uninstall-search`, `clean-search`.
+
+---
+
 ## Upgrading HCL DX
 
 To upgrade to a new CF release:
 
 1. Update `DX_VERSION` in `local.env` to the new chart version.
-2. Run `make pull-dx-chart` — downloads and extracts the new version to its own `charts/<new-version>/` folder without touching your existing version.
-3. Run `make pull-dx-values` — saves the new version's default values to `charts/<new-version>/dx-values-reference.yaml`.
-4. Copy and adapt your previous `charts/<old-version>/dx-values.yaml` to `charts/<new-version>/dx-values.yaml`, merging in any new defaults from the reference file.
+2. Run `make pull-dx-chart` — downloads and extracts the new version to its own `charts/dx/<new-version>/` folder without touching your existing version.
+3. Run `make pull-dx-values` — saves the new version's default values to `charts/dx/<new-version>/dx-values-reference.yaml`.
+4. Copy and adapt your previous `charts/dx/<old-version>/dx-values.yaml` to `charts/dx/<new-version>/dx-values.yaml`, merging in any new defaults from the reference file.
 5. Run `make install-dx` — detects the existing release and performs a `helm upgrade`.
 
 Each version lives in its own `charts/<version>/` folder, so you can roll back by changing `DX_VERSION` and re-running `make install-dx`.
@@ -175,13 +201,13 @@ Each version lives in its own `charts/<version>/` folder, so you can roll back b
 
 ## Resetting a Locally Edited Chart
 
-If you have edited files inside `charts/<version>/hcl-dx-deployment/` and want to restore the originals:
+If you have edited files inside `charts/dx/<version>/hcl-dx-deployment/` and want to restore the originals:
 
 ```bash
 make reset-dx-chart
 ```
 
-This re-extracts from the tarball in `charts/<version>/`, prompting for confirmation before overwriting your changes.
+This re-extracts from the tarball in `charts/dx/<version>/`, prompting for confirmation before overwriting your changes.
 
 ---
 
@@ -269,3 +295,16 @@ Each tool exposes four targets: `install-<tool>`, `configure-<tool>`, `uninstall
 | `install-dx` | Full interactive install/upgrade: pull chart → edit values → create secret → deploy |
 | `uninstall-dx` | Uninstall the HCL DX Helm release |
 | `clean-dx` | Delete the DX namespace |
+
+### HCL DX Search v2
+
+| Target | Description |
+|---|---|
+| `pull-search-chart` | Download and extract the DX Search v2 chart to `charts/search/<version>/` |
+| `pull-search-values` | Save default chart values to `charts/search/<version>/search-values-reference.yaml` |
+| `reset-search-chart` | Re-extract chart from tarball, discarding local edits |
+| `configure-search-prereqs` | Set `vm.max_map_count=262144` on the host (required by OpenSearch) |
+| `create-search-certs` | Generate TLS certs and create `search-admin-cert`, `search-node-cert`, `search-client-cert` secrets |
+| `install-search` | Full automated install/upgrade: prereqs → certs → chart → values → deploy → wire DX |
+| `uninstall-search` | Uninstall the DX Search v2 Helm release |
+| `clean-search` | Remove generated DX Search v2 files |

@@ -31,7 +31,10 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         install-k9s configure-k9s uninstall-k9s clean-k9s \
         install-all uninstall-all \
         configure-dx install-dx uninstall-dx clean-dx \
-        pull-dx-chart pull-dx-values reset-dx-chart create-dx-secret
+        pull-dx-chart pull-dx-values reset-dx-chart create-dx-secret \
+        pull-search-chart pull-search-values reset-search-chart \
+        configure-search-prereqs create-search-certs \
+        install-search uninstall-search clean-search
 
 # Auto-create local.env with defaults if it does not exist
 $(LOCAL_ENV):
@@ -163,3 +166,29 @@ uninstall-dx: ## Uninstall the HCL DX Helm release
 
 clean-dx: ## Delete the DX namespace and remove generated DX files
 	@bash scripts/clean-dx.sh
+
+##@ HCL DX Search v2
+
+pull-search-chart: ## Download and extract the DX Search v2 chart to charts/search/<version>/
+	@bash scripts/pull-search-chart.sh
+
+pull-search-values: ## Save DX Search v2 default values to charts/search/<version>/search-values-reference.yaml
+	@bash scripts/pull-search-values.sh
+
+reset-search-chart: ## Re-extract the DX Search v2 chart from the local tarball, discarding any edits
+	@bash scripts/reset-search-chart.sh
+
+configure-search-prereqs: ## Set vm.max_map_count=262144 on the host (required by OpenSearch)
+	@bash scripts/configure-search-prereqs.sh
+
+create-search-certs: ## Generate TLS certs for OpenSearch and create the three k8s secrets
+	@bash scripts/create-search-certs.sh
+
+install-search: ## Install or upgrade HCL DX Search v2 via Helm (runs prereqs + cert setup automatically)
+	@bash scripts/install-search.sh
+
+uninstall-search: ## Uninstall the HCL DX Search v2 Helm release
+	@bash scripts/uninstall-search.sh
+
+clean-search: ## Remove generated DX Search v2 files
+	@bash scripts/clean-search.sh
