@@ -40,13 +40,6 @@ DX_SEARCH_VALUES="charts/dx/${DX_VERSION}/dx-search-values.yaml"
 DX_VALUES="charts/dx/${DX_VERSION}/dx-values.yaml"
 DX_LOCAL_CHART="charts/dx/${DX_VERSION}/hcl-dx-deployment"
 
-if [[ -f "$DX_SEARCH_VALUES" ]]; then
-    rm "$DX_SEARCH_VALUES"
-    echo "  Removed ${DX_SEARCH_VALUES}."
-else
-    echo "  ${DX_SEARCH_VALUES} not found — already removed."
-fi
-
 if [[ ! -f "$DX_VALUES" ]]; then
     echo "  ${DX_VALUES} not found — skipping DX upgrade."
     exit 0
