@@ -211,6 +211,38 @@ This re-extracts from the tarball in `charts/dx/<version>/`, prompting for confi
 
 ---
 
+## Laptop Sleep / Wake
+
+After the laptop resumes from sleep, Docker's internal network bridge goes stale. k3d nodes lose DNS resolution and pods that need to pull images enter `ImagePullBackOff`.
+
+### Automatic fix (recommended)
+
+Install a systemd sleep hook that restarts Docker in the background on every resume:
+
+```bash
+sudo make install-sleep-hook
+```
+
+This creates `/etc/systemd/system-sleep/hcl-dx-k3d-resume`. k3d containers recover automatically via their `--restart=unless-stopped` policy; stuck pods retry and clear on their own.
+
+To remove it:
+
+```bash
+sudo make uninstall-sleep-hook
+```
+
+### Manual fix
+
+If the hook is not installed, or pods are still stuck after a resume:
+
+```bash
+make resume
+```
+
+Restarts Docker, waits for it to be ready, then starts the k3d cluster.
+
+---
+
 ## Teardown
 
 ```bash
@@ -308,3 +340,11 @@ Each tool exposes four targets: `install-<tool>`, `configure-<tool>`, `uninstall
 | `install-search` | Full automated install/upgrade: prereqs → certs → chart → values → deploy → wire DX |
 | `uninstall-search` | Uninstall the DX Search v2 Helm release |
 | `clean-search` | Remove generated DX Search v2 files |
+
+### Laptop
+
+| Target | Description |
+|---|---|
+| `resume` | Restart Docker and k3d after laptop sleep (fixes ImagePullBackOff) |
+| `install-sleep-hook` | Install systemd hook to auto-restart Docker on every resume (requires sudo) |
+| `uninstall-sleep-hook` | Remove the systemd Docker-restart sleep hook (requires sudo) |
