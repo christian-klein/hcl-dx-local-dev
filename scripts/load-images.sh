@@ -51,7 +51,7 @@ DX_LOCAL_CHART="charts/dx/${DX_VERSION}/hcl-dx-deployment"
 DX_VALUES="charts/dx/${DX_VERSION}/dx-values.yaml"
 DX_SEARCH_VALUES="charts/dx/${DX_VERSION}/dx-search-values.yaml"
 
-DX_FLAGS=()
+DX_FLAGS=(--set "images.repository=${HCL_REGISTRY}")
 [[ -f "$DX_VALUES" ]]        && DX_FLAGS+=(-f "$DX_VALUES")
 [[ -f "$DX_SEARCH_VALUES" ]] && DX_FLAGS+=(-f "$DX_SEARCH_VALUES")
 
@@ -61,7 +61,7 @@ SEARCH_LOCAL_CHART="charts/search/${DX_SEARCH_VERSION}/hcl-dx-search"
 SEARCH_VALUES="charts/search/${DX_SEARCH_VERSION}/search-values.yaml"
 SEARCH_VALUES_LOCAL="charts/search/${DX_SEARCH_VERSION}/search-values-local.yaml"
 
-SEARCH_FLAGS=()
+SEARCH_FLAGS=(--set "images.repository=${HCL_REGISTRY}")
 [[ -f "$SEARCH_VALUES" ]]       && SEARCH_FLAGS+=(-f "$SEARCH_VALUES")
 [[ -f "$SEARCH_VALUES_LOCAL" ]] && SEARCH_FLAGS+=(-f "$SEARCH_VALUES_LOCAL")
 # Always override image names — chart defaults use dx/ but registry path is dx-compose/.
