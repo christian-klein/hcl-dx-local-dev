@@ -17,6 +17,7 @@ fi
 
 echo "Installing sleep hook at ${HOOK} (requires sudo)..."
 
+sudo mkdir -p "$(dirname "$HOOK")"
 sudo tee "$HOOK" > /dev/null <<'EOF'
 #!/bin/sh
 # Restart Docker on resume so k3d nodes regain network / DNS after sleep.
