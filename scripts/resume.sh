@@ -14,14 +14,9 @@ fi
 
 CLUSTER_NAME="${CLUSTER_NAME:-hcl-dx}"
 
-echo "==> Restarting Docker (requires sudo)..."
-sudo systemctl restart docker
-
-echo "==> Waiting for Docker daemon..."
-until docker info &>/dev/null 2>&1; do sleep 1; done
-echo "    Docker is ready."
-
-echo "==> Starting k3d cluster '${CLUSTER_NAME}'..."
+echo "==> Restarting k3d cluster '${CLUSTER_NAME}'..."
+echo "    (stop/start preserves the containerd image cache)"
+k3d cluster stop "$CLUSTER_NAME" 2>/dev/null || true
 k3d cluster start "$CLUSTER_NAME" 2>/dev/null || true
 
 echo ""

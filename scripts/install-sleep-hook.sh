@@ -20,10 +20,13 @@ echo "Installing sleep hook at ${HOOK} (requires sudo)..."
 sudo mkdir -p "$(dirname "$HOOK")"
 sudo tee "$HOOK" > /dev/null <<'EOF'
 #!/bin/sh
-# Restart Docker on resume so k3d nodes regain network / DNS after sleep.
+# Restart k3d nodes on resume so they regain network / DNS after sleep.
+# We stop/start the cluster rather than restarting Docker to preserve the
+# containerd image cache inside the k3d node containers.
 case "$1/$2" in
   post/suspend|post/hibernate|post/hybrid-sleep|post/suspend-then-hibernate)
-    systemctl restart docker &
+    k3d cluster stop hcl-dx 2>/dev/null
+    k3d cluster start hcl-dx 2>/dev/null
     ;;
 esac
 EOF

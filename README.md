@@ -213,17 +213,19 @@ This re-extracts from the tarball in `charts/dx/<version>/`, prompting for confi
 
 ## Laptop Sleep / Wake
 
-After the laptop resumes from sleep, Docker's internal network bridge goes stale. k3d nodes lose DNS resolution and pods that need to pull images enter `ImagePullBackOff`.
+After the laptop resumes from sleep, k3d nodes lose network/DNS connectivity and pods that need to pull images enter `ImagePullBackOff`.
+
+The fix is a clean k3d cluster stop/start — **not** a Docker restart. Restarting Docker clears the containerd image cache inside the k3d nodes. If HCL has since removed the image tags your chart references from their registry (which they do periodically), the pods will be unable to re-pull and will stay broken until you update chart versions.
 
 ### Automatic fix (recommended)
 
-Install a systemd sleep hook that restarts Docker in the background on every resume:
+Install a systemd sleep hook that stops and starts the k3d cluster on every resume:
 
 ```bash
 sudo make install-sleep-hook
 ```
 
-This creates `/etc/systemd/system-sleep/hcl-dx-k3d-resume`. k3d containers recover automatically via their `--restart=unless-stopped` policy; stuck pods retry and clear on their own.
+This creates `/etc/systemd/system-sleep/hcl-dx-k3d-resume`. The cluster restarts with fresh networking and the containerd image cache is preserved; stuck pods retry and clear on their own.
 
 To remove it:
 
@@ -347,4 +349,4 @@ Each tool exposes four targets: `install-<tool>`, `configure-<tool>`, `uninstall
 |---|---|
 | `resume` | Restart Docker and k3d after laptop sleep (fixes ImagePullBackOff) |
 | `install-sleep-hook` | Install systemd hook to auto-restart Docker on every resume (requires sudo) |
-| `uninstall-sleep-hook` | Remove the systemd Docker-restart sleep hook (requires sudo) |
+| `uninstall-sleep-hook` | Remove the systemd sleep hook (requires sudo) |
