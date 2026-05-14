@@ -34,7 +34,8 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         pull-dx-chart pull-dx-values reset-dx-chart patch-dx-chart create-dx-secret \
         pull-search-chart pull-search-values reset-search-chart \
         configure-search-prereqs create-search-certs \
-        install-search uninstall-search clean-search
+        install-search uninstall-search clean-search \
+        resume install-sleep-hook uninstall-sleep-hook
 
 # Auto-create local.env with defaults if it does not exist
 $(LOCAL_ENV):
@@ -195,3 +196,14 @@ uninstall-search: ## Uninstall the HCL DX Search v2 Helm release
 
 clean-search: ## Remove generated DX Search v2 files
 	@bash scripts/clean-search.sh
+
+##@ Laptop
+
+resume: ## Restart Docker and k3d after laptop sleep (fixes ImagePullBackOff)
+	@bash scripts/resume.sh
+
+install-sleep-hook: ## Install systemd hook to auto-restart Docker on every resume
+	@bash scripts/install-sleep-hook.sh
+
+uninstall-sleep-hook: ## Remove the systemd Docker-restart sleep hook
+	@bash scripts/uninstall-sleep-hook.sh
