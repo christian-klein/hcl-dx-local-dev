@@ -36,7 +36,7 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         configure-search-prereqs create-search-certs \
         install-search uninstall-search clean-search \
         resume install-sleep-hook uninstall-sleep-hook \
-        load-images check-images
+        load-images check-images wipe-registry delete-image
 
 # Auto-create local.env with defaults if it does not exist
 $(LOCAL_ENV):
@@ -217,3 +217,9 @@ load-images: ## Pull HCL images for the current chart versions and cache in the 
 
 check-images: ## Show which images for the current chart versions are cached locally
 	@bash scripts/check-images.sh
+
+wipe-registry: ## Delete all images from the local registry (prompts for confirmation)
+	@bash scripts/wipe-registry.sh
+
+delete-image: ## Remove one image from the local registry (IMAGE=hclcr.io/dx-compose/name:tag)
+	@bash scripts/delete-image.sh "$(IMAGE)"

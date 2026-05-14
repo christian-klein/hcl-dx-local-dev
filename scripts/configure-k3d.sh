@@ -41,7 +41,8 @@ if k3d registry list 2>/dev/null | grep -q "k3d-${REGISTRY_NAME}"; then
     echo "Local registry 'k3d-${REGISTRY_NAME}' already exists on port ${REGISTRY_PORT}."
 else
     echo "Creating local registry 'k3d-${REGISTRY_NAME}' on port ${REGISTRY_PORT}..."
-    k3d registry create "$REGISTRY_NAME" --port "$REGISTRY_PORT"
+    k3d registry create "$REGISTRY_NAME" --port "$REGISTRY_PORT" \
+        --env REGISTRY_STORAGE_DELETE_ENABLED=true
     echo "Registry ready. Push images with 'make load-images'."
 fi
 

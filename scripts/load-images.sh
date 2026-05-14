@@ -64,6 +64,12 @@ SEARCH_VALUES_LOCAL="charts/search/${DX_SEARCH_VERSION}/search-values-local.yaml
 SEARCH_FLAGS=()
 [[ -f "$SEARCH_VALUES" ]]       && SEARCH_FLAGS+=(-f "$SEARCH_VALUES")
 [[ -f "$SEARCH_VALUES_LOCAL" ]] && SEARCH_FLAGS+=(-f "$SEARCH_VALUES_LOCAL")
+# Always override image names — chart defaults use dx/ but registry path is dx-compose/.
+SEARCH_FLAGS+=(
+    --set "images.names.openSearch=dx-compose/opensearch"
+    --set "images.names.searchMiddleware=dx-compose/opensearch-middleware"
+    --set "images.names.fileProcessor=dx-compose/file-processor"
+)
 
 collect_images "$DX_SEARCH_RELEASE" "$SEARCH_LOCAL_CHART" "${SEARCH_FLAGS[@]}"
 
