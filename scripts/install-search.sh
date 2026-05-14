@@ -214,6 +214,7 @@ if [[ ! -d "$DX_LOCAL_CHART" ]]; then
     exit 0
 fi
 
+bash "${SCRIPT_DIR}/patch-dx-chart.sh"
 echo "  Upgrading DX release '${DX_RELEASE}'..."
 helm upgrade --install "$DX_RELEASE" "$DX_LOCAL_CHART" \
     --namespace "$DX_NAMESPACE" \

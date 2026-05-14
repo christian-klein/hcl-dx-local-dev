@@ -31,7 +31,7 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         install-k9s configure-k9s uninstall-k9s clean-k9s \
         install-all uninstall-all \
         configure-dx install-dx uninstall-dx clean-dx \
-        pull-dx-chart pull-dx-values reset-dx-chart create-dx-secret \
+        pull-dx-chart pull-dx-values reset-dx-chart patch-dx-chart create-dx-secret \
         pull-search-chart pull-search-values reset-search-chart \
         configure-search-prereqs create-search-certs \
         install-search uninstall-search clean-search
@@ -145,6 +145,9 @@ pull-dx-values: ## Save the HCL DX default values to charts/<version>/dx-values-
 
 reset-dx-chart: ## Re-extract the HCL DX chart from the local tarball, discarding any edits
 	@bash scripts/reset-dx-chart.sh
+
+patch-dx-chart: ## Patch DX chart PVC templates for local-path (ReadWriteMany → ReadWriteOnce)
+	@bash scripts/patch-dx-chart.sh
 
 create-dx-secret: ## Create the hclcr.io image pull secret in the DX namespace
 	@bash scripts/create-dx-secret.sh

@@ -99,6 +99,10 @@ else
     ACTION="Installing"
 fi
 
+# ── Patch chart templates for local-path (RWX → RWO) ─────────────────────────
+
+bash "${SCRIPT_DIR}/patch-dx-chart.sh"
+
 EXTRA_VALUES_FLAG=""
 if [[ -f "$DX_SEARCH_VALUES" ]]; then
     EXTRA_VALUES_FLAG="-f ${DX_SEARCH_VALUES}"
