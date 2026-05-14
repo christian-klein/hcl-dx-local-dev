@@ -35,7 +35,8 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         pull-search-chart pull-search-values reset-search-chart \
         configure-search-prereqs create-search-certs \
         install-search uninstall-search clean-search \
-        resume install-sleep-hook uninstall-sleep-hook
+        resume install-sleep-hook uninstall-sleep-hook \
+        load-images check-images
 
 # Auto-create local.env with defaults if it does not exist
 $(LOCAL_ENV):
@@ -79,9 +80,10 @@ uninstall-k3d: ## Delete the k3d cluster and remove the k3d binary
 	@sudo rm -f /usr/local/bin/k3d
 	@echo "k3d cluster deleted and binary removed."
 
-clean-k3d: ## Remove generated k3d cluster config
+clean-k3d: ## Remove generated k3d cluster config and local image registry
 	@rm -f config/k3d-cluster.yaml
-	@echo "Removed k3d cluster config."
+	@k3d registry delete dx-registry 2>/dev/null || true
+	@echo "Removed k3d cluster config and local registry."
 
 ##@ kubectl
 
@@ -207,3 +209,11 @@ install-sleep-hook: ## Install systemd hook to auto-restart Docker on every resu
 
 uninstall-sleep-hook: ## Remove the systemd Docker-restart sleep hook
 	@bash scripts/uninstall-sleep-hook.sh
+
+##@ Local Registry
+
+load-images: ## Pull HCL images for the current chart versions and cache in the local registry
+	@bash scripts/load-images.sh
+
+check-images: ## Show which images for the current chart versions are cached locally
+	@bash scripts/check-images.sh
