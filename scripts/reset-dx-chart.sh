@@ -16,7 +16,7 @@ if [[ -z "${DX_VERSION:-}" ]]; then
     exit 1
 fi
 
-CHART_DIR="charts/${DX_VERSION}"
+CHART_DIR="charts/dx/${DX_VERSION}"
 TARBALL="${CHART_DIR}/hcl-dx-deployment-${DX_VERSION}.tgz"
 EXTRACTED="${CHART_DIR}/hcl-dx-deployment"
 

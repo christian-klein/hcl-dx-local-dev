@@ -24,7 +24,7 @@ HCL_REGISTRY="${HCL_REGISTRY:-hclcr.io}"
 DX_NAMESPACE="${DX_NAMESPACE:-dxns}"
 DX_REGISTRY_SECRET="${DX_REGISTRY_SECRET:-dx-harbor}"
 DX_VERSION="${DX_VERSION:-}"
-DX_VALUES="charts/${DX_VERSION}/dx-values.yaml"
+DX_VALUES="charts/dx/${DX_VERSION}/dx-values.yaml"
 
 # ── Namespace check ────────────────────────────────────────────────────────────
 

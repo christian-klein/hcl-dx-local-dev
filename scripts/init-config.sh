@@ -31,6 +31,7 @@ DX_VERSION=
 DX_NAMESPACE=dxns
 DX_RELEASE=dx
 DX_REGISTRY_SECRET=dx-harbor
+DX_CHART_REPO=hclcr.io/dx/hcl-dx-deployment
 # Editor opened by 'make install-dx' for reviewing the custom values file.
 EDITOR=vi
 

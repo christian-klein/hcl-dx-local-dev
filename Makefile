@@ -31,7 +31,12 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         install-k9s configure-k9s uninstall-k9s clean-k9s \
         install-all uninstall-all \
         configure-dx install-dx uninstall-dx clean-dx \
-        pull-dx-chart pull-dx-values reset-dx-chart create-dx-secret
+        pull-dx-chart pull-dx-values reset-dx-chart patch-dx-chart create-dx-secret \
+        pull-search-chart pull-search-values reset-search-chart \
+        configure-search-prereqs create-search-certs init-search-security \
+        install-search uninstall-search clean-search \
+        resume install-sleep-hook uninstall-sleep-hook \
+        load-images check-images wipe-registry delete-image
 
 # Auto-create local.env with defaults if it does not exist
 $(LOCAL_ENV):
@@ -75,9 +80,10 @@ uninstall-k3d: ## Delete the k3d cluster and remove the k3d binary
 	@sudo rm -f /usr/local/bin/k3d
 	@echo "k3d cluster deleted and binary removed."
 
-clean-k3d: ## Remove generated k3d cluster config
+clean-k3d: ## Remove generated k3d cluster config and local image registry
 	@rm -f config/k3d-cluster.yaml
-	@echo "Removed k3d cluster config."
+	@k3d registry delete dx-registry 2>/dev/null || true
+	@echo "Removed k3d cluster config and local registry."
 
 ##@ kubectl
 
@@ -143,6 +149,9 @@ pull-dx-values: ## Save the HCL DX default values to charts/<version>/dx-values-
 reset-dx-chart: ## Re-extract the HCL DX chart from the local tarball, discarding any edits
 	@bash scripts/reset-dx-chart.sh
 
+patch-dx-chart: ## Patch DX chart PVC templates for local-path (ReadWriteMany → ReadWriteOnce)
+	@bash scripts/patch-dx-chart.sh
+
 create-dx-secret: ## Create the hclcr.io image pull secret in the DX namespace
 	@bash scripts/create-dx-secret.sh
 
@@ -163,3 +172,57 @@ uninstall-dx: ## Uninstall the HCL DX Helm release
 
 clean-dx: ## Delete the DX namespace and remove generated DX files
 	@bash scripts/clean-dx.sh
+
+##@ HCL DX Search v2
+
+pull-search-chart: ## Download and extract the DX Search v2 chart to charts/search/<version>/
+	@bash scripts/pull-search-chart.sh
+
+pull-search-values: ## Save DX Search v2 default values to charts/search/<version>/search-values-reference.yaml
+	@bash scripts/pull-search-values.sh
+
+reset-search-chart: ## Re-extract the DX Search v2 chart from the local tarball, discarding any edits
+	@bash scripts/reset-search-chart.sh
+
+configure-search-prereqs: ## Set vm.max_map_count=262144 on the host (required by OpenSearch)
+	@bash scripts/configure-search-prereqs.sh
+
+create-search-certs: ## Generate TLS certs for OpenSearch and create the three k8s secrets
+	@bash scripts/create-search-certs.sh
+
+init-search-security: ## Run securityadmin.sh to initialize OpenSearch security (required after install or cert change)
+	@bash scripts/init-search-security.sh
+
+install-search: ## Install or upgrade HCL DX Search v2 via Helm (runs prereqs + cert setup automatically)
+	@bash scripts/install-search.sh
+
+uninstall-search: ## Uninstall the HCL DX Search v2 Helm release
+	@bash scripts/uninstall-search.sh
+
+clean-search: ## Remove generated DX Search v2 files
+	@bash scripts/clean-search.sh
+
+##@ Laptop
+
+resume: ## Restart Docker and k3d after laptop sleep (fixes ImagePullBackOff)
+	@bash scripts/resume.sh
+
+install-sleep-hook: ## Install systemd hook to auto-restart Docker on every resume
+	@bash scripts/install-sleep-hook.sh
+
+uninstall-sleep-hook: ## Remove the systemd Docker-restart sleep hook
+	@bash scripts/uninstall-sleep-hook.sh
+
+##@ Local Registry
+
+load-images: ## Pull HCL images for the current chart versions and cache in the local registry
+	@bash scripts/load-images.sh
+
+check-images: ## Show which images for the current chart versions are cached locally
+	@bash scripts/check-images.sh
+
+wipe-registry: ## Delete all images from the local registry (prompts for confirmation)
+	@bash scripts/wipe-registry.sh
+
+delete-image: ## Remove one image from the local registry (IMAGE=hclcr.io/dx-compose/name:tag)
+	@bash scripts/delete-image.sh "$(IMAGE)"

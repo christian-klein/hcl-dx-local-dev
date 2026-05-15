@@ -24,4 +24,4 @@ fi
 # ── Note ───────────────────────────────────────────────────────────────────────
 
 echo "Chart files in charts/ are not removed by clean-dx."
-echo "  Delete charts/${DX_VERSION} manually if needed."
+echo "  Delete charts/dx/${DX_VERSION} manually if needed."
