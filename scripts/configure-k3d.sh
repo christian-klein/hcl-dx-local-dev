@@ -42,7 +42,7 @@ if k3d registry list 2>/dev/null | grep -q "k3d-${REGISTRY_NAME}"; then
 else
     echo "Creating local registry 'k3d-${REGISTRY_NAME}' on port ${REGISTRY_PORT}..."
     k3d registry create "$REGISTRY_NAME" --port "$REGISTRY_PORT" \
-        --env REGISTRY_STORAGE_DELETE_ENABLED=true
+        --delete-enabled
     echo "Registry ready. Push images with 'make load-images'."
 fi
 
@@ -80,11 +80,13 @@ ports:
     nodeFilters:
       - loadbalancer
 registries:
+  use:
+    - k3d-${REGISTRY_NAME}:${REGISTRY_PORT}
   config: |
     mirrors:
       "${HCL_REGISTRY:-hclcr.io}":
         endpoint:
-          - "http://k3d-${REGISTRY_NAME}:${REGISTRY_PORT}"
+          - "http://k3d-${REGISTRY_NAME}:5000"
 options:
   k3d:
     wait: true

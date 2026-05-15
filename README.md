@@ -4,6 +4,10 @@ A Make-driven toolkit for provisioning a local [HCL Digital Experience (DX)](htt
 
 Running `make` opens an interactive menu of all available targets (fuzzy-searchable with [fzf](https://github.com/junegunn/fzf), numbered list otherwise).
 
+DX versions:
+
+https://help.hcl-software.com/digital-experience/9.5/CF235/get_started/download/harbor_container_registry/#helm-chart-and-cf-versions
+
 ## Stack
 
 | Tool | Role |
@@ -179,9 +183,10 @@ make install-search
 6. **Local overrides** — writes `charts/search/<version>/search-values-local.yaml` with the image registry, image pull secret, `local-path` StorageClass for both OpenSearch volumes, and the DX deployment name. This file is always regenerated and merged _after_ your values file so it always wins.
 7. **Editor** — opens `charts/search/<version>/search-values.yaml` for you to add any additional overrides (image pull secrets, resource limits, replica counts, etc.).
 8. **Helm install/upgrade** — runs `helm upgrade --install` with both values files.
-9. **DX wiring** — injects `networking.searchMiddlewareService` into `charts/dx/<version>/dx-values.yaml` and runs `helm upgrade` on the DX release so DX can reach the search middleware.
+9. **OpenSearch security init** — waits for the OpenSearch pod to be ready, generates a bcrypt-hashed `admin` user via OpenSearch's own `hash.sh` tool, writes it into `internal_users.yml` inside the pod, then runs `securityadmin.sh` to push the full security configuration to OpenSearch's internal index. This is required on every fresh install and after any certificate rotation. Re-run manually with `make init-search-security`.
+10. **DX wiring** — writes `charts/dx/<version>/dx-search-values.yaml` with all required Search v2 settings (`applications.remoteSearch: false`, `networking.searchMiddlewareService`, `configuration.searchMiddleware`, `configuration.core.search` v2 flags) and runs `helm upgrade` on the DX release. `install-dx` automatically picks up this overlay on subsequent runs. `uninstall-search` re-runs the DX upgrade without the overlay, restoring chart defaults (Remote Search re-enabled, v1 search settings).
 
-Individual targets for each step are also available: `configure-search-prereqs`, `create-search-certs`, `pull-search-chart`, `pull-search-values`, `reset-search-chart`, `uninstall-search`, `clean-search`.
+Individual targets for each step are also available: `configure-search-prereqs`, `create-search-certs`, `init-search-security`, `pull-search-chart`, `pull-search-values`, `reset-search-chart`, `uninstall-search`, `clean-search`.
 
 ---
 
@@ -241,7 +246,40 @@ If the hook is not installed, or pods are still stuck after a resume:
 make resume
 ```
 
-Restarts Docker, waits for it to be ready, then starts the k3d cluster.
+Stops and starts the k3d cluster to restore networking without touching Docker or the containerd image cache.
+
+---
+
+## Local Registry
+
+The k3d cluster includes a local Docker registry (`k3d-dx-registry`) on port `5001` (configurable via `REGISTRY_PORT` in `local.env`). It is configured as a transparent mirror for `hclcr.io`, so pods pull from the local registry automatically — no chart or image reference changes required.
+
+### Why use the local registry
+
+- **Offline use** — once images are loaded, the cluster runs without internet access.
+- **Version stability** — HCL periodically removes old image tags from their registry. Images cached locally remain available even after the upstream tag is deleted.
+- **Faster pod startup** — pulls from `localhost:5001` instead of the internet.
+
+### Loading images
+
+```bash
+make load-images
+```
+
+Reads the image list from the rendered Helm templates for both the DX and Search v2 charts, checks which images are already cached, then pulls the missing ones from `hclcr.io`, retags them, and pushes them to the local registry. Requires `HCL_USER` and `HCL_PASS` to be set in `local.env` and the cluster to be running.
+
+```bash
+make check-images
+```
+
+Reports the cache status (present / missing) for every image referenced by the current chart versions without pulling anything.
+
+### Managing cached images
+
+```bash
+make wipe-registry                               # delete all cached images (prompts for confirmation)
+make delete-image IMAGE=hclcr.io/dx-compose/name:tag  # remove one specific image
+```
 
 ---
 
@@ -275,6 +313,7 @@ uninstall-dx  → clean-dx
 | `HCL_USER` | _(required)_ | Harbor username (email address) |
 | `HCL_PASS` | _(required)_ | Harbor CLI secret (from your profile) |
 | `CLUSTER_NAME` | `hcl-dx` | k3d cluster name |
+| `REGISTRY_PORT` | `5001` | Host port for the local k3d image registry |
 | `K3D_SERVERS` | `1` | Number of k3s server nodes |
 | `K3D_AGENTS` | `2` | Number of k3s agent nodes |
 | `K3D_CPUS` | `4` | Informational — k3d has no per-cluster CPU cap |
@@ -283,6 +322,7 @@ uninstall-dx  → clean-dx
 | `DX_NAMESPACE` | `dxns` | Kubernetes namespace for DX |
 | `DX_RELEASE` | `dx` | Helm release name |
 | `DX_REGISTRY_SECRET` | `dx-harbor` | Name of the image pull secret |
+| `DX_CHART_REPO` | `hclcr.io/dx/hcl-dx-deployment` | OCI path to the DX Helm chart (without `oci://` prefix) |
 | `DX_TLS_SECRET` | `dx-tls-cert` | Name of the TLS secret used by HAProxy (self-signed cert auto-generated) |
 | `EDITOR` | `vi` | Editor for reviewing the DX values file |
 | `DX_SEARCH_VERSION` | _(optional)_ | Helm chart version for DX Search v2 |
@@ -325,8 +365,11 @@ Each tool exposes four targets: `install-<tool>`, `configure-<tool>`, `uninstall
 | `pull-dx-chart` | Download and extract DX chart to `charts/<version>/` |
 | `pull-dx-values` | Save default chart values to `charts/<version>/dx-values-reference.yaml` |
 | `reset-dx-chart` | Re-extract chart from tarball, discarding local edits |
+| `patch-dx-chart` | Patch DX chart PVC templates for `local-path` (`ReadWriteMany` → `ReadWriteOnce`) |
 | `create-dx-secret` | Create the `hclcr.io` image pull secret in the DX namespace |
 | `install-dx` | Full interactive install/upgrade: pull chart → edit values → create secret → deploy |
+| `configure-dx-ingress` | Create Traefik TCP passthrough route so DX is reachable at `https://localhost` |
+| `open-dx` | Open HCL DX in the browser at `https://localhost/wps/portal` |
 | `uninstall-dx` | Uninstall the HCL DX Helm release |
 | `clean-dx` | Delete the DX namespace |
 
@@ -339,7 +382,8 @@ Each tool exposes four targets: `install-<tool>`, `configure-<tool>`, `uninstall
 | `reset-search-chart` | Re-extract chart from tarball, discarding local edits |
 | `configure-search-prereqs` | Set `vm.max_map_count=262144` on the host (required by OpenSearch) |
 | `create-search-certs` | Generate TLS certs and create `search-admin-cert`, `search-node-cert`, `search-client-cert` secrets |
-| `install-search` | Full automated install/upgrade: prereqs → certs → chart → values → deploy → wire DX |
+| `init-search-security` | Push security config to OpenSearch's internal index (required after install or cert rotation) |
+| `install-search` | Full automated install/upgrade: prereqs → certs → chart → values → deploy → security init → wire DX |
 | `uninstall-search` | Uninstall the DX Search v2 Helm release |
 | `clean-search` | Remove generated DX Search v2 files |
 
@@ -347,6 +391,15 @@ Each tool exposes four targets: `install-<tool>`, `configure-<tool>`, `uninstall
 
 | Target | Description |
 |---|---|
-| `resume` | Restart Docker and k3d after laptop sleep (fixes ImagePullBackOff) |
-| `install-sleep-hook` | Install systemd hook to auto-restart Docker on every resume (requires sudo) |
+| `resume` | Stop and restart the k3d cluster after laptop sleep (fixes ImagePullBackOff) |
+| `install-sleep-hook` | Install systemd hook to auto-restart k3d on every resume (requires sudo) |
 | `uninstall-sleep-hook` | Remove the systemd sleep hook (requires sudo) |
+
+### Local Registry
+
+| Target | Description |
+|---|---|
+| `load-images` | Pull HCL images for the current chart versions and cache in the local registry |
+| `check-images` | Show which images for the current chart versions are cached locally |
+| `wipe-registry` | Delete all images from the local registry (prompts for confirmation) |
+| `delete-image` | Remove one image: `make delete-image IMAGE=hclcr.io/dx-compose/name:tag` |

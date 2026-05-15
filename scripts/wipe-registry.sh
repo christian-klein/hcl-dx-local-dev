@@ -19,6 +19,13 @@ k3d registry delete "$REGISTRY_NAME" 2>/dev/null || true
 
 echo "Recreating registry on port ${REGISTRY_PORT}..."
 k3d registry create "$REGISTRY_NAME" --port "$REGISTRY_PORT" \
-    --env REGISTRY_STORAGE_DELETE_ENABLED=true
+    --delete-enabled
+
+# Reconnect the registry to the cluster network so nodes can resolve k3d-dx-registry.
+CLUSTER_NETWORK="k3d-${CLUSTER_NAME:-hcl-dx}"
+if docker network inspect "$CLUSTER_NETWORK" &>/dev/null; then
+    echo "Reconnecting registry to cluster network '${CLUSTER_NETWORK}'..."
+    docker network connect "$CLUSTER_NETWORK" "k3d-${REGISTRY_NAME}" 2>/dev/null || true
+fi
 
 echo "Registry wiped. Run 'make load-images' to reload."

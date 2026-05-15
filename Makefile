@@ -33,7 +33,7 @@ _UNINSTALL_DEPS := uninstall-dx clean-dx \
         configure-dx install-dx uninstall-dx clean-dx \
         pull-dx-chart pull-dx-values reset-dx-chart patch-dx-chart create-dx-secret \
         pull-search-chart pull-search-values reset-search-chart \
-        configure-search-prereqs create-search-certs \
+        configure-search-prereqs create-search-certs init-search-security \
         install-search uninstall-search clean-search \
         resume install-sleep-hook uninstall-sleep-hook \
         load-images check-images wipe-registry delete-image
@@ -189,6 +189,9 @@ configure-search-prereqs: ## Set vm.max_map_count=262144 on the host (required b
 
 create-search-certs: ## Generate TLS certs for OpenSearch and create the three k8s secrets
 	@bash scripts/create-search-certs.sh
+
+init-search-security: ## Run securityadmin.sh to initialize OpenSearch security (required after install or cert change)
+	@bash scripts/init-search-security.sh
 
 install-search: ## Install or upgrade HCL DX Search v2 via Helm (runs prereqs + cert setup automatically)
 	@bash scripts/install-search.sh

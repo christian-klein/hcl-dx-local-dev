@@ -17,7 +17,7 @@ if [[ -z "${DX_VERSION:-}" ]]; then
 fi
 
 HCL_REGISTRY="${HCL_REGISTRY:-hclcr.io}"
-CHART_DIR="charts/${DX_VERSION}"
+CHART_DIR="charts/dx/${DX_VERSION}"
 EXTRACTED="${CHART_DIR}/hcl-dx-deployment"
 REFERENCE="${CHART_DIR}/dx-values-reference.yaml"
 
@@ -36,10 +36,10 @@ else
     fi
     echo "Local chart not found. Fetching values from OCI registry..."
     echo "$HCL_PASS" | helm registry login "$HCL_REGISTRY" -u "$HCL_USER" --password-stdin
-    helm show values "oci://${HCL_REGISTRY}/dx/hcl-dx-deployment" \
+    helm show values "oci://${HCL_REGISTRY}/dx-compose/hcl-dx-deployment" \
         --version "$DX_VERSION" > "$REFERENCE"
 fi
 
 echo ""
 echo "Reference values saved to: ${REFERENCE}"
-echo "Copy the sections you want to override into charts/${DX_VERSION}/dx-values.yaml."
+echo "Copy the sections you want to override into charts/dx/${DX_VERSION}/dx-values.yaml."

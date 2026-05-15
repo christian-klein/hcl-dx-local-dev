@@ -26,7 +26,8 @@ if [[ -z "${HCL_USER:-}" || -z "${HCL_PASS:-}" ]]; then
 fi
 
 HCL_REGISTRY="${HCL_REGISTRY:-hclcr.io}"
-CHART_DIR="charts/${DX_VERSION}"
+DX_CHART_REPO="${DX_CHART_REPO:-hclcr.io/dx/hcl-dx-deployment}"
+CHART_DIR="charts/dx/${DX_VERSION}"
 TARBALL="${CHART_DIR}/hcl-dx-deployment-${DX_VERSION}.tgz"
 EXTRACTED="${CHART_DIR}/hcl-dx-deployment"
 
@@ -41,7 +42,7 @@ else
     echo "$HCL_PASS" | helm registry login "$HCL_REGISTRY" -u "$HCL_USER" --password-stdin
 
     echo "Pulling hcl-dx-deployment ${DX_VERSION}..."
-    helm pull "oci://${HCL_REGISTRY}/dx/hcl-dx-deployment" \
+    helm pull "oci://${DX_CHART_REPO}" \
         --version "$DX_VERSION" \
         --destination "$CHART_DIR"
     echo "Tarball saved to: ${TARBALL}"

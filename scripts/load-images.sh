@@ -65,10 +65,11 @@ SEARCH_FLAGS=(--set "images.repository=${HCL_REGISTRY}")
 [[ -f "$SEARCH_VALUES" ]]       && SEARCH_FLAGS+=(-f "$SEARCH_VALUES")
 [[ -f "$SEARCH_VALUES_LOCAL" ]] && SEARCH_FLAGS+=(-f "$SEARCH_VALUES_LOCAL")
 # Always override image names — chart defaults use dx/ but registry path is dx-compose/.
+
 SEARCH_FLAGS+=(
-    --set "images.names.openSearch=dx-compose/opensearch"
-    --set "images.names.searchMiddleware=dx-compose/opensearch-middleware"
-    --set "images.names.fileProcessor=dx-compose/file-processor"
+    --set "images.names.openSearch=dx/dx-opensearch"
+    --set "images.names.searchMiddleware=dx/dx-search-middleware"
+    --set "images.names.fileProcessor=dx/dx-file-processor"
 )
 
 collect_images "$DX_SEARCH_RELEASE" "$SEARCH_LOCAL_CHART" "${SEARCH_FLAGS[@]}"
